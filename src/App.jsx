@@ -9,7 +9,7 @@ function App() {
   return (
     <>
       <div>
-        Dit me thang dang dit me may
+        Hello ae
       </div>
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
