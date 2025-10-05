@@ -7,11 +7,13 @@ import App from './App.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Auth0Provider
-      domain="dev-6yegtp5vi30dzp47.us.auth0.com"
-      clientId="L96DKwg1TCHj6j76TX63wtEQKWhqnFWQ"
+      domain={import.meta.env.VITE_AUTH0_DOMAIN || "dev-6yegtp5vi30dzp47.us.auth0.com"}
+      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID || "L96DKwg1TCHj6j76TX63wtEQKWhqnFWQ"}
       authorizationParams={{
-        redirect_uri: window.location.origin
+        redirect_uri: import.meta.env.VITE_AUTH0_REDIRECT_URI || window.location.origin,
+        prompt: 'login' // Force login every time
       }}
+      cacheLocation="memory" // Don't persist auth state
     >
       <App />
     </Auth0Provider>

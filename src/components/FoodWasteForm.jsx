@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import './FoodWasteForm.css';
+import { dailyImportService, recipeService } from '../lib/supabaseService';
 
 // --- SVG ICONS ---
 const Icons = {
@@ -39,7 +41,7 @@ const MASTER_INGREDIENT_LIST = [
 
 
 // --- Recipe Onboarding Component ---
-const RecipeOnboarding = ({ onRecipesAdded }) => {
+const RecipeOnboarding = ({ onRecipesAdded, restaurantId }) => {
     const [recipeName, setRecipeName] = useState('');
     const [ingredients, setIngredients] = useState([{ name: '', amount: '' }]);
     const [createdRecipes, setCreatedRecipes] = useState([]);
@@ -60,13 +62,35 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
         setIngredients(newIngredients);
     };
 
-    const handleSaveRecipe = (e) => {
+    const handleSaveRecipe = async (e) => {
         e.preventDefault();
         if (recipeName && ingredients.every(ing => ing.name && ing.amount)) {
             const newRecipe = {
                 name: recipeName,
                 ingredients: ingredients.map(ing => ({ ...ing, amount: parseFloat(ing.amount) }))
             };
+            
+            // Save recipe to Supabase if restaurantId is available
+            if (restaurantId) {
+                try {
+                    console.log('Saving recipe to Supabase:', newRecipe);
+                    const result = await recipeService.saveRecipeWithIngredients(restaurantId, newRecipe);
+                    
+                    if (result.success) {
+                        console.log('Recipe saved successfully:', result.data);
+                        // Add Supabase recipe ID to the local recipe
+                        newRecipe.supabaseId = result.data.recipe_id;
+                        newRecipe.ingredientsCount = result.data.ingredients_count;
+                    } else {
+                        console.error('Failed to save recipe to Supabase:', result.error);
+                        // Still add to local state even if Supabase fails
+                    }
+                } catch (error) {
+                    console.error('Error saving recipe to Supabase:', error);
+                    // Still add to local state even if Supabase fails
+                }
+            }
+            
             setCreatedRecipes(prev => [...prev, newRecipe]);
             setRecipeName('');
             setIngredients([{ name: '', amount: '' }]);
@@ -74,13 +98,33 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
             alert('Please fill out the recipe name and all ingredient fields.');
         }
     };
-    
-    const handleCsvImport = () => {
+
+    const handleCsvImport = async () => {
         alert("CSV import functionality would be handled here. For now, we'll add sample recipes.");
         const sampleRecipes = [
-            { name: 'Classic Burger', ingredients: [{ name: 'Beef Patty', amount: 0.5 }, { name: 'Bun', amount: 0.2 }, { name: 'Lettuce', amount: 0.1 }] },
-            { name: 'Cheese Pizza', ingredients: [{ name: 'Dough', amount: 1 }, { name: 'Cheese', amount: 0.5 }, { name: 'Tomato Sauce', amount: 0.4 }] },
+            { name: 'Classic Burger', ingredients: [{ name: 'Ground beef', amount: 0.5 }, { name: 'Hamburger Buns', amount: 0.2 }, { name: 'Iceberg Lettuce', amount: 0.1 }] },
+            { name: 'Cheese Pizza', ingredients: [{ name: 'Pizza Dough', amount: 1 }, { name: 'Mozzarella Cheese', amount: 0.5 }, { name: 'Tomatoes (Roma)', amount: 0.4 }] },
         ];
+        
+        // Save sample recipes to Supabase if restaurantId is available
+        if (restaurantId) {
+            try {
+                console.log('Saving sample recipes to Supabase...');
+                for (const recipe of sampleRecipes) {
+                    const result = await recipeService.saveRecipeWithIngredients(restaurantId, recipe);
+                    if (result.success) {
+                        console.log(`Sample recipe "${recipe.name}" saved successfully`);
+                        recipe.supabaseId = result.data.recipe_id;
+                        recipe.ingredientsCount = result.data.ingredients_count;
+                    } else {
+                        console.error(`Failed to save sample recipe "${recipe.name}":`, result.error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving sample recipes to Supabase:', error);
+            }
+        }
+        
         onRecipesAdded(sampleRecipes);
     };
 
@@ -90,7 +134,7 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
         const example2 = "Spaghetti Bolognese,Pasta,1.5";
         const example3 = "Caesar Salad,Lettuce,3";
         const csvContent = `data:text/csv;charset=utf-8,${headers}\n${example1}\n${example2}\n${example3}`;
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -99,7 +143,7 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
         link.click();
         document.body.removeChild(link);
     };
-    
+
     const filteredSuggestions = useMemo(() => {
         if (activeSuggestionIndex === -1 || !ingredients[activeSuggestionIndex]?.name) return [];
         const currentInput = ingredients[activeSuggestionIndex].name.toLowerCase();
@@ -108,72 +152,140 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
 
 
     return (
-        <div className="max-w-6xl mx-auto p-8 bg-white rounded-lg shadow-lg">
-            <h2 className="text-3xl font-bold text-center text-gray-800">Welcome to EcoEats Tracker</h2>
-            <p className="text-center text-gray-500 mt-2 mb-8">To get started, please add your menu recipes.</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-                {/* Manual Add Form */}
-                <div className="border p-6 rounded-lg">
-                    <div className="flex items-center mb-4">
-                        <Icons.Edit/>
-                        <h3 className="text-xl font-semibold text-gray-700">Add Recipes by Hand</h3>
-                    </div>
-                    <form onSubmit={handleSaveRecipe} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600">Recipe Name</label>
-                            <input type="text" value={recipeName} onChange={(e) => setRecipeName(e.target.value)} placeholder="e.g., Spaghetti Bolognese" className="w-full p-2 mt-1 border rounded-md focus:ring-green-500 focus:border-green-500" required />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-600">Ingredients</label>
-                            {ingredients.map((ing, index) => (
-                                <div key={index} className="relative">
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <input type="text" value={ing.name} 
-                                            onChange={(e) => handleIngredientChange(index, 'name', e.target.value)} 
-                                            onFocus={() => setActiveSuggestionIndex(index)}
-                                            onBlur={() => setTimeout(() => setActiveSuggestionIndex(-1), 150)} // delay to allow click
-                                            placeholder="Ingredient Name" className="w-1/2 p-2 border rounded-md" required />
-                                        <input type="number" value={ing.amount} onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)} placeholder="lbs" min="0" step="0.01" className="w-1/3 p-2 border rounded-md" required />
-                                        <button type="button" onClick={() => removeIngredientField(index)} className="text-red-500 hover:text-red-700 p-2"><Icons.Trash /></button>
-                                    </div>
-                                    {activeSuggestionIndex === index && filteredSuggestions.length > 0 && (
-                                         <ul className="absolute z-10 w-1/2 mt-1 bg-white border rounded-md shadow-lg max-h-40 overflow-y-auto">
-                                             {filteredSuggestions.map(suggestion => (
-                                                 <li key={suggestion} onMouseDown={() => { handleIngredientChange(index, 'name', suggestion); setActiveSuggestionIndex(-1); }} className="p-2 hover:bg-gray-100 cursor-pointer">{suggestion}</li>
-                                             ))}
-                                         </ul>
-                                    )}
-                                </div>
-                            ))}
-                            <button type="button" onClick={addIngredientField} className="mt-2 text-sm text-green-600 hover:text-green-800 flex items-center"><Icons.Plus/>Add Ingredient</button>
-                        </div>
-                        <button type="submit" className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 font-semibold transition-colors">Save Recipe</button>
-                    </form>
+        <div className = "card">
+            <div className="food-waste-form-container">
+                <div className="form-header">
+                    <h2 className="form-title">Welcome to Feco Food Tracker</h2>
+                    <p className="form-subtitle">To get started, please add your menu recipes.</p>
                 </div>
-                
-                {/* Right Panel */}
-                <div className="space-y-8">
-                    {/* CSV Import */}
-                    <div className="border p-6 rounded-lg bg-gray-50">
-                        <div className="flex items-center mb-4"><Icons.Upload/><h3 className="text-xl font-semibold text-gray-700">Import Recipes</h3></div>
-                        <p className="text-gray-600 mb-4">Upload a CSV file to add multiple recipes at once.</p>
-                        <div className="flex gap-4">
-                           <button onClick={handleDownloadCsvTemplate} className="w-full bg-gray-600 text-white py-2 rounded-md hover:bg-gray-700 font-semibold transition-colors flex items-center justify-center"><Icons.Download /> Template</button>
-                            <button onClick={handleCsvImport} className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 font-semibold transition-colors flex items-center justify-center">Import CSV</button>
+
+                <div className="form-content-grid">
+                    {/* Manual Add Form */}
+                    <div className="form-card">
+                        <div className="card-header">
+                            <Icons.Edit />
+                            <h3 className="card-title">Add Recipes by Hand</h3>
                         </div>
+                        <form onSubmit={handleSaveRecipe} className="recipe-form">
+                            <div className="form-group">
+                                <label className="form-label">Recipe Name</label>
+                                <input
+                                    type="text"
+                                    value={recipeName}
+                                    onChange={(e) => setRecipeName(e.target.value)}
+                                    placeholder="e.g., Spaghetti Bolognese"
+                                    className="form-input"
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Ingredients</label>
+                                {ingredients.map((ing, index) => (
+                                    <div key={index} className="ingredient-row">
+                                        <div className="ingredient-inputs">
+                                            <input
+                                                type="text"
+                                                value={ing.name}
+                                                onChange={(e) => handleIngredientChange(index, 'name', e.target.value)}
+                                                onFocus={() => setActiveSuggestionIndex(index)}
+                                                onBlur={() => setTimeout(() => setActiveSuggestionIndex(-1), 150)}
+                                                placeholder="Ingredient Name"
+                                                className="ingredient-name-input"
+                                                required
+                                            />
+                                            <input
+                                                type="number"
+                                                value={ing.amount}
+                                                onChange={(e) => handleIngredientChange(index, 'amount', e.target.value)}
+                                                placeholder="lbs"
+                                                min="0"
+                                                step="0.01"
+                                                className="ingredient-amount-input"
+                                                required
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeIngredientField(index)}
+                                                className="remove-ingredient-btn"
+                                            >
+                                                <Icons.Trash />
+                                            </button>
+                                        </div>
+                                        {activeSuggestionIndex === index && filteredSuggestions.length > 0 && (
+                                            <ul className="suggestions-dropdown">
+                                                {filteredSuggestions.map(suggestion => (
+                                                    <li
+                                                        key={suggestion}
+                                                        onMouseDown={() => {
+                                                            handleIngredientChange(index, 'name', suggestion);
+                                                            setActiveSuggestionIndex(-1);
+                                                        }}
+                                                        className="suggestion-item"
+                                                    >
+                                                        {suggestion}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={addIngredientField}
+                                    className="add-ingredient-btn"
+                                >
+                                    <Icons.Plus />Add Ingredient
+                                </button>
+                            </div>
+                            <button type="submit" className="save-recipe-btn">Save Recipe</button>
+                        </form>
                     </div>
 
-                    {/* Created Recipes List */}
-                    {createdRecipes.length > 0 && (
-                        <div className="border p-6 rounded-lg">
-                            <h3 className="text-xl font-semibold text-gray-700 mb-4">Added Recipes</h3>
-                            <ul className="space-y-2 max-h-48 overflow-y-auto">
-                                {createdRecipes.map((recipe, index) => ( <li key={index} className="p-2 bg-green-50 rounded-md font-medium text-green-800">{recipe.name}</li>))}
-                            </ul>
-                             <button onClick={() => onRecipesAdded(createdRecipes)} className="w-full mt-4 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 font-semibold transition-colors flex items-center justify-center">Finish & Start Importing <Icons.RightArrow/></button>
+                    {/* Right Panel */}
+                    <div className="right-panel">
+                        {/* CSV Import */}
+                        <div className="import-card">
+                            <div className="card-header">
+                                <Icons.Upload />
+                                <h3 className="card-title">Import Recipes</h3>
+                            </div>
+                            <p className="import-description">Upload a CSV file to add multiple recipes at once.</p>
+                            <div className="import-buttons">
+                                <button
+                                    onClick={handleDownloadCsvTemplate}
+                                    className="template-btn"
+                                >
+                                    <Icons.Download /> Template
+                                </button>
+                                <button
+                                    onClick={handleCsvImport}
+                                    className="import-btn"
+                                >
+                                    Import CSV
+                                </button>
+                            </div>
                         </div>
-                    )}
+
+                        {/* Created Recipes List */}
+                        {createdRecipes.length > 0 && (
+                            <div className="recipes-card">
+                                <h3 className="card-title">Added Recipes</h3>
+                                <ul className="recipes-list">
+                                    {createdRecipes.map((recipe, index) => (
+                                        <li key={index} className="recipe-item">
+                                            {recipe.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <button
+                                    onClick={() => onRecipesAdded(createdRecipes)}
+                                    className="finish-btn"
+                                >
+                                    Finish & Start Importing <Icons.RightArrow />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -184,7 +296,7 @@ const RecipeOnboarding = ({ onRecipesAdded }) => {
 const AddItemWithSuggest = ({ category, onAddItem }) => {
     const [inputValue, setInputValue] = useState('');
     const [suggestionsVisible, setSuggestionsVisible] = useState(false);
-    
+
     const filteredSuggestions = useMemo(() => {
         if (!inputValue) return [];
         return MASTER_INGREDIENT_LIST.filter(ing => ing.toLowerCase().includes(inputValue.toLowerCase()));
@@ -202,27 +314,35 @@ const AddItemWithSuggest = ({ category, onAddItem }) => {
         onAddItem(category, suggestion);
         setInputValue('');
     };
-    
+
     return (
-        <div className="relative">
+        <div className="add-item-container">
             <form onSubmit={handleFormSubmit}>
-                <div className="flex items-center gap-2">
-                    <input 
+                <div className="add-item-inputs">
+                    <input
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         onFocus={() => setSuggestionsVisible(true)}
-                        onBlur={() => setTimeout(() => setSuggestionsVisible(false), 150)} // Delay to allow click
-                        className="w-full p-2 border rounded-md"
+                        onBlur={() => setTimeout(() => setSuggestionsVisible(false), 150)}
+                        className="add-item-input"
                         placeholder="Add food item..."
                     />
-                    <button type="submit" className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"><Icons.Plus/></button>
+                    <button type="submit" className="add-item-btn">
+                        <Icons.Plus />
+                    </button>
                 </div>
             </form>
             {suggestionsVisible && inputValue && filteredSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                <ul className="add-item-suggestions">
                     {filteredSuggestions.map(suggestion => (
-                        <li key={suggestion} onMouseDown={() => handleSuggestionClick(suggestion)} className="p-2 hover:bg-gray-100 cursor-pointer">{suggestion}</li>
+                        <li
+                            key={suggestion}
+                            onMouseDown={() => handleSuggestionClick(suggestion)}
+                            className="add-item-suggestion"
+                        >
+                            {suggestion}
+                        </li>
                     ))}
                 </ul>
             )}
@@ -231,8 +351,8 @@ const AddItemWithSuggest = ({ category, onAddItem }) => {
 };
 
 // --- Import Tracking Component ---
-const ImportTracker = ({ recipes }) => {
-    const CATEGORIES = ['Meat', 'Dairy', 'Greens', 'Bakery', 'Produce', 'Other', 'Seasonings and Sauces'];
+const ImportTracker = ({ recipes, restaurantId }) => {
+    const CATEGORIES = ['Meat', 'Dairy', 'Greens', 'Carbonhydrates'];
     const [importData, setImportData] = useState({});
 
     const handleAddItem = (category, itemName) => {
@@ -241,7 +361,7 @@ const ImportTracker = ({ recipes }) => {
             [category]: { ...prev[category], [itemName]: 0 }
         }));
     };
-    
+
     const handleImportChange = (category, item, value) => {
         const amount = parseFloat(value) || 0;
         setImportData(prev => ({
@@ -256,24 +376,98 @@ const ImportTracker = ({ recipes }) => {
         }, 0);
     }, [importData]);
 
+    const handleSubmitDailyImport = async () => {
+        const submissionData = {
+            date: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString(),
+            recipes: recipes,
+            importData: importData,
+            totalImports: totalImports,
+            categories: CATEGORIES
+        };
+        
+        console.log('Daily Import Data Submitted:', submissionData);
+        
+        try {
+            // Use the restaurant ID from Auth0 authentication
+            const actualRestaurantId = restaurantId || '00000000-0000-0000-0000-000000000000'; // Fallback to placeholder
+            
+            const result = await dailyImportService.saveDailyImport(actualRestaurantId, submissionData);
+            
+            if (result.success) {
+                const sourceMessage = result.source === 'supabase' 
+                    ? 'Daily import data saved to Supabase!' 
+                    : 'Daily import data saved locally (Supabase unavailable)';
+                
+                alert(`${sourceMessage}\nTotal: ${totalImports.toFixed(2)} lbs\nItems: ${Object.keys(importData).length} categories\nDate: ${submissionData.date}`);
+                setImportData({});
+            } else {
+                alert(`Failed to save data: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('Error saving data:', error);
+            alert('Failed to save data. Please check your internet connection.');
+        }
+    };
+
+    const handleExportCSV = () => {
+        const submissionData = {
+            date: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString(),
+            recipes: recipes,
+            importData: importData,
+            totalImports: totalImports,
+            categories: CATEGORIES
+        };
+        
+        // Convert to CSV format
+        let csvContent = "Date,Category,Item,Amount (lbs)\n";
+        
+        Object.entries(submissionData.importData).forEach(([category, items]) => {
+            Object.entries(items).forEach(([item, amount]) => {
+                csvContent += `${submissionData.date},"${category}","${item}",${amount}\n`;
+            });
+        });
+        
+        // Add summary row
+        csvContent += `${submissionData.date},"TOTAL","All Items",${submissionData.totalImports}\n`;
+        
+        // Create and download CSV file
+        const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+        const csvUrl = URL.createObjectURL(csvBlob);
+        
+        const csvLink = document.createElement('a');
+        csvLink.href = csvUrl;
+        csvLink.download = `daily-import-${submissionData.date}.csv`;
+        document.body.appendChild(csvLink);
+        csvLink.click();
+        document.body.removeChild(csvLink);
+        
+        URL.revokeObjectURL(csvUrl);
+        
+        alert(`CSV file downloaded!\nFile: daily-import-${submissionData.date}.csv`);
+    };
+
     return (
-        <div className="max-w-6xl mx-auto p-8">
-            <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Daily Food Import Tracker</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="import-tracker-container">
+            <div className="tracker-header">
+                <h2 className="tracker-title">Daily Food Import Tracker</h2>
+            </div>
+            <div className="categories-grid">
                 {CATEGORIES.map(category => (
-                    <div key={category} className="bg-white p-6 rounded-lg shadow-md border">
-                        <h3 className="text-xl font-semibold text-green-700 mb-4">{category}</h3>
-                        <div className="space-y-3 mb-4">
+                    <div key={category} className="category-card">
+                        <h3 className="category-title">{category}</h3>
+                        <div className="items-list">
                             {importData[category] && Object.keys(importData[category]).map(item => (
-                                <div key={item} className="flex items-center justify-between">
-                                    <label className="text-gray-700">{item}</label>
-                                    <input 
-                                        type="number" 
+                                <div key={item} className="item-row">
+                                    <label className="item-label">{item}</label>
+                                    <input
+                                        type="number"
                                         min="0"
                                         step="0.1"
                                         value={importData[category][item]}
                                         onChange={(e) => handleImportChange(category, item, e.target.value)}
-                                        className="w-24 p-1 border rounded-md text-right"
+                                        className="item-amount-input"
                                         placeholder="lbs"
                                     />
                                 </div>
@@ -283,22 +477,34 @@ const ImportTracker = ({ recipes }) => {
                     </div>
                 ))}
             </div>
-            <div className="mt-10 sticky bottom-0 bg-white/80 backdrop-blur-sm p-4 rounded-t-lg shadow-lg border text-center">
-                <h3 className="text-2xl font-bold text-gray-800">
-                    Total Daily Imports: <span className="text-green-600">{totalImports.toFixed(2)} lbs</span>
+            <div className="total-summary">
+                <h3 className="total-title">
+                    Total Daily Imports: <span className="total-amount">{totalImports.toFixed(2)} lbs</span>
                 </h3>
+                <div className="export-buttons">
+                    <button onClick={handleSubmitDailyImport} className="submit-daily-import-btn">
+                        Save to Supabase
+                    </button>
+                    <button onClick={handleExportCSV} className="export-csv-btn">
+                        Export as CSV
+                    </button>
+                </div>
             </div>
         </div>
     );
 };
 
 // --- Main App Component ---
-export default function EcoEatsTrackerApp() {
+export default function EcoEatsTrackerApp({ restaurantId }) {
     const [recipes, setRecipes] = useState([]);
     const handleRecipesAdded = (newRecipes) => { setRecipes(prev => [...prev, ...newRecipes]); };
     return (
-        <div className="bg-gray-50 min-h-screen font-sans py-10">
-            {recipes.length === 0 ? (<RecipeOnboarding onRecipesAdded={handleRecipesAdded} />) : (<ImportTracker recipes={recipes} />)}
+        <div className="food-tracker-app">
+            {recipes.length === 0 ? (
+                <RecipeOnboarding onRecipesAdded={handleRecipesAdded} restaurantId={restaurantId} />
+            ) : (
+                <ImportTracker recipes={recipes} restaurantId={restaurantId} />
+            )}
         </div>
     );
 };

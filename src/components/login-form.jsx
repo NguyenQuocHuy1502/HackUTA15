@@ -4,26 +4,58 @@ import googleLogo from '../assets/google.png'
 import microsoftLogo from '../assets/Microsoft_logo.svg.png'
 import LoginButton from './LoginButton'
 import SignUpButton from './SignUpButton'
+import RoleSelectionModal from './RoleSelectionModal'
 
 export function LoginForm({
   className,
+  onRoleChange,
   ...props
 }) {
   const { loginWithRedirect, isLoading, error } = useAuth0()
   const [isSignUp, setIsSignUp] = useState(false)
+  const [selectedRole, setSelectedRole] = useState('business')
+  const [showRoleModal, setShowRoleModal] = useState(false)
+  const [pendingAuthAction, setPendingAuthAction] = useState(null)
   
-  const handleLogin = () => {
-    console.log('Login clicked')
-    loginWithRedirect()
-  }
-  
+  const handleRoleChange = (e) => {
+    const role = e.target.value;
+    console.log('Role changed to:', role); // Debug log
+    setSelectedRole(role);
+    if (onRoleChange) {
+      onRoleChange(role);
+    }
+  };
+
+  const handleRoleSelected = (role) => {
+    console.log('Role selected from modal:', role);
+    setSelectedRole(role);
+    if (onRoleChange) {
+      onRoleChange(role);
+    }
+    
+    // Execute the pending authentication action
+    if (pendingAuthAction) {
+      pendingAuthAction(role);
+      setPendingAuthAction(null);
+    }
+  };
+
+  const showRoleSelectionModal = (authAction) => {
+    console.log('Showing role selection modal');
+    setPendingAuthAction(() => authAction);
+    setShowRoleModal(true);
+  };
+
   const handleSignUp = () => {
-    console.log('Sign up clicked')
-    loginWithRedirect({
-      authorizationParams: {
-        screen_hint: 'signup'
-      }
-    })
+    console.log('Sign up clicked - showing role modal')
+    showRoleSelectionModal((role) => {
+      localStorage.setItem('selectedRole', role);
+      loginWithRedirect({
+        authorizationParams: {
+          screen_hint: 'signup'
+        }
+      });
+    });
   }
   
   if (isLoading) {
@@ -64,18 +96,35 @@ export function LoginForm({
               />
             </div>
             <div className="form-group">
-              <label>Role</label>
-              <div className="role-selection">
-                <label className="role-option">
-                  <input type="radio" name="role" value="business" />
-                  <span>Business Owner</span>
-                  <small>Restaurants, Grocery Stores, Caterers</small>
-                </label>
-                <label className="role-option">
-                  <input type="radio" name="role" value="volunteer" />
-                  <span>Volunteer</span>
-                  <small>Food Banks, Community Organizations</small>
-                </label>
+              <label>Account Type</label>
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                border: '2px solid #86c98a',
+                textAlign: 'center'
+              }}>
+                <div style={{fontSize: '16px', fontWeight: 'bold', color: '#2d3748', marginBottom: '10px'}}>
+                  Current Selection: <span style={{color: selectedRole === 'business' ? '#86c98a' : '#3b82f6'}}>
+                    {selectedRole === 'business' ? 'Restaurant Owner' : 'Pickup Organization'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowRoleModal(true)}
+                  style={{
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    backgroundColor: '#86c98a',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Choose Account Type
+                </button>
               </div>
             </div>
             <div className="form-group">
@@ -85,7 +134,10 @@ export function LoginForm({
             <div className="form-group">
               {!isSignUp ? (
                 <div className="auth-buttons">
-                  <LoginButton />
+                  <LoginButton selectedRole={selectedRole} />
+                  <div style={{fontSize: '10px', color: '#999', marginTop: '5px'}}>
+                    Will login as: {selectedRole}
+                  </div>
                   <button 
                     type="button" 
                     className="auth-button"
@@ -96,7 +148,10 @@ export function LoginForm({
                 </div>
               ) : (
                 <div className="auth-buttons">
-                  <SignUpButton />
+                  <SignUpButton selectedRole={selectedRole} />
+                  <div style={{fontSize: '10px', color: '#999', marginTop: '5px'}}>
+                    Will signup as: {selectedRole}
+                  </div>
                   <button 
                     type="button" 
                     className="auth-button"
@@ -112,11 +167,17 @@ export function LoginForm({
                   <button 
                     type="button" 
                     className="social-button google-button"
-                    onClick={() => loginWithRedirect({
-                      authorizationParams: {
-                        connection: 'google-oauth2'
-                      }
-                    })}
+                    onClick={() => {
+                      console.log('Google login clicked - showing role modal')
+                      showRoleSelectionModal((role) => {
+                        localStorage.setItem('selectedRole', role);
+                        loginWithRedirect({
+                          authorizationParams: {
+                            connection: 'google-oauth2'
+                          }
+                        });
+                      });
+                    }}
                   >
                     <img src={googleLogo} alt="Google" className="social-logo" />
                     Login with Google
@@ -125,11 +186,17 @@ export function LoginForm({
                   <button 
                     type="button" 
                     className="social-button microsoft-button"
-                    onClick={() => loginWithRedirect({
-                      authorizationParams: {
-                        connection: 'windowslive'
-                      }
-                    })}
+                    onClick={() => {
+                      console.log('Microsoft login clicked - showing role modal')
+                      showRoleSelectionModal((role) => {
+                        localStorage.setItem('selectedRole', role);
+                        loginWithRedirect({
+                          authorizationParams: {
+                            connection: 'windowslive'
+                          }
+                        });
+                      });
+                    }}
                   >
                     <img src={microsoftLogo} alt="Microsoft" className="social-logo" />
                     Login with Microsoft
@@ -142,12 +209,18 @@ export function LoginForm({
                   <button 
                     type="button" 
                     className="social-button google-button"
-                    onClick={() => loginWithRedirect({
-                      authorizationParams: {
-                        connection: 'google-oauth2',
-                        screen_hint: 'signup'
-                      }
-                    })}
+                    onClick={() => {
+                      console.log('Google signup clicked - showing role modal')
+                      showRoleSelectionModal((role) => {
+                        localStorage.setItem('selectedRole', role);
+                        loginWithRedirect({
+                          authorizationParams: {
+                            connection: 'google-oauth2',
+                            screen_hint: 'signup'
+                          }
+                        });
+                      });
+                    }}
                   >
                     <img src={googleLogo} alt="Google" className="social-logo" />
                     Sign up with Google
@@ -156,12 +229,18 @@ export function LoginForm({
                   <button 
                     type="button" 
                     className="social-button microsoft-button"
-                    onClick={() => loginWithRedirect({
-                      authorizationParams: {
-                        connection: 'windowslive',
-                        screen_hint: 'signup'
-                      }
-                    })}
+                    onClick={() => {
+                      console.log('Microsoft signup clicked - showing role modal')
+                      showRoleSelectionModal((role) => {
+                        localStorage.setItem('selectedRole', role);
+                        loginWithRedirect({
+                          authorizationParams: {
+                            connection: 'windowslive',
+                            screen_hint: 'signup'
+                          }
+                        });
+                      });
+                    }}
                   >
                     <img src={microsoftLogo} alt="Microsoft" className="social-logo" />
                     Sign up with Microsoft
@@ -184,6 +263,12 @@ export function LoginForm({
           </form>
         </div>
       </div>
+      
+      <RoleSelectionModal 
+        isOpen={showRoleModal}
+        onClose={() => setShowRoleModal(false)}
+        onRoleSelected={handleRoleSelected}
+      />
     </div>
   )
 }

@@ -1,0 +1,258 @@
+/* Food Waste Tracker Styles */
+.food-leftover-app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.waste-tracker-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.tracker-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.tracker-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 0.5rem;
+}
+
+.tracker-subtitle {
+    font-size: 1.1rem;
+    color: #a16207;
+    margin-bottom: 0;
+}
+
+/* Loading and Error States */
+.loading-message, .error-message, .no-recipes-message {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 2px solid #fbbf24;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #fde68a;
+    border-top: 4px solid #f59e0b;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-message h3, .no-recipes-message h3 {
+    color: #dc2626;
+    margin-bottom: 1rem;
+}
+
+.error-message p, .no-recipes-message p {
+    color: #92400e;
+    margin-bottom: 1rem;
+}
+
+.error-message button {
+    padding: 0.75rem 1.5rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.error-message button:hover {
+    background: #b91c1c;
+}
+
+/* Waste Entries */
+.waste-entries {
+    margin-bottom: 2rem;
+}
+
+.waste-entry {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 2px solid #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.waste-entry-content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    align-items: end;
+}
+
+.field-label {
+    display: block;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.recipe-selection, .servings-input, .reason-selection {
+    display: flex;
+    flex-direction: column;
+}
+
+.recipe-select, .servings-input-field, .reason-select {
+    padding: 0.75rem;
+    border: 2px solid #fde68a;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    background: white;
+    color: #92400e;
+    transition: all 0.2s;
+}
+
+.recipe-select:focus, .servings-input-field:focus, .reason-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.remove-entry-btn {
+    padding: 0.75rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 48px;
+}
+
+.remove-entry-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+/* Actions */
+.waste-actions {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.add-waste-btn {
+    padding: 1rem 2rem;
+    background: #059669;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.add-waste-btn:hover {
+    background: #047857;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+}
+
+.add-waste-btn:active {
+    transform: translateY(0);
+}
+
+/* Summary */
+.total-summary {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 2px solid #fbbf24;
+}
+
+.total-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 1rem;
+}
+
+.total-amount {
+    color: #dc2626;
+    font-size: 1.75rem;
+}
+
+.submit-waste-btn {
+    padding: 1rem 2rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    min-width: 200px;
+}
+
+.submit-waste-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
+.submit-waste-btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .waste-tracker-container {
+        padding: 1rem;
+    }
+    
+    .waste-entry {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .waste-entry-content {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .remove-entry-btn {
+        align-self: center;
+        margin-top: 1rem;
+    }
+}
