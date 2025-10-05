@@ -1,31 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chart } from 'chart.js/auto';
 import { wasteAnalysisService, CONSISTENT_SAMPLE_DATA, WEEKDAYS } from '../lib/wasteAnalysisService';
-
-// Add custom styles for animations
-const styles = `
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.6s ease-out;
-}
-`;
-
-// Inject styles
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
-}
+import './WeeklyWasteChart.css';
 
 const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
     const [weeklyData, setWeeklyData] = useState([]);
@@ -530,23 +506,23 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
     const averageDailyWaste = weeklyData.length > 0 ? totalWeeklyWaste / weeklyData.length : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Chart Section */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold text-gray-800">Weekly Waste Analysis</h3>
-                    <div className="flex gap-2 flex-wrap">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-800">Weekly Waste Analysis</h3>
+                    <div className="flex gap-3 flex-wrap">
                         <button
                             onClick={fetchWeeklyData}
                             disabled={loading}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 text-sm"
+                            className="px-5 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 text-sm font-medium"
                         >
                             {loading ? 'Loading...' : 'Refresh'}
                         </button>
                         <button
                             onClick={refreshSundayData}
                             disabled={loading}
-                            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-400 text-sm"
+                            className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 text-sm font-medium"
                         >
                             Update Today
                         </button>
@@ -568,10 +544,10 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                             {aiLoading ? (
                                 <div className="flex items-center gap-2">
                                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                    AI Generate
+                                    Generating...
                                 </div>
                             ) : (
-                                'AI Generate'
+                                'AI-Powered Analysis'
                             )}
                         </button>
                     </div>
@@ -589,7 +565,7 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg text-center">
                         <p className="text-sm text-blue-600 font-medium">Peak Waste Day</p>
-                        <p className="text-lg font-bold text-blue-700">
+                        <p className="text-2xl font-bold text-blue-700">
                             {weeklyData.length > 0 ? 
                                 Math.max(...weeklyData.map(d => d.totalServingsWasted)) + ' servings' : 
                                 'N/A'
@@ -623,45 +599,45 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                 </div>
             </div>
 
-            {/* Prominent AI Generate Button */}
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">AI-Powered Analysis</h3>
+            {/* AI Generate Button */}
+            <div className="ai-button-container">
                 <button
                     onClick={generateAIAnalysis}
                     disabled={aiLoading || !weeklyData.length}
-                    className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 disabled:bg-gray-400 text-lg font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+                    className="ai-button"
                 >
                     {aiLoading ? (
-                        <div className="flex items-center gap-3">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                            Generating AI Analysis...
+                        <div className="ai-button-loading">
+                            <div className="ai-button-spinner"></div>
+                            <span>Generating AI Analysis...</span>
                         </div>
                     ) : (
-                        '🤖 AI Generate Analysis'
+                        <span className="ai-button-text">AI-Powered Analysis</span>
                     )}
                 </button>
                 {!weeklyData.length && (
-                    <p className="text-sm text-gray-500 mt-2">Load data first to enable AI analysis</p>
+                    <p className="ai-warning-text">Load data first to enable AI analysis (Data length: {weeklyData.length})</p>
                 )}
+                <p className="ai-debug-text">Button state: {aiLoading ? 'Loading' : 'Ready'} | Data: {weeklyData.length} items</p>
             </div>
 
-            {/* AI Analysis Results - Hidden for now */}
+            {/* AI Analysis Results */}
             {aiAnalysis && (
-                <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-8 animate-fadeIn">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                <div className="ai-results-container animate-fadeIn">
+                    <div className="ai-results-header">
+                        <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                             </svg>
                         </div>
-                        <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                            AI-Powered Import Optimization
+                        <h3 className="ai-results-title">
+                            Analysis Results
                         </h3>
                     </div>
                     
                     {/* Summary */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-6 rounded-xl mb-8 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
+                    <div className="ai-summary-section">
+                        <div className="ai-summary-header">
                             <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -669,60 +645,60 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                             </div>
                             <h4 className="text-lg font-bold text-green-800">Analysis Summary</h4>
                         </div>
-                        <p className="text-green-700 font-medium leading-relaxed">{aiAnalysis.summary}</p>
+                        <p className="ai-summary-text">{aiAnalysis.summary}</p>
                     </div>
 
                     {/* Ingredient Analysis */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="w-8 h-8 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center">
+                    <div className="ai-ingredient-section">
+                        <div className="ai-ingredient-header">
+                            <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </div>
-                            <h4 className="text-xl font-bold text-gray-800">Ingredient-Specific Import Recommendations</h4>
+                            <h4 className="ai-ingredient-title">Ingredient-Specific Import Recommendations</h4>
                         </div>
-                        <div className="space-y-6">
+                        <div className="space-y-8">
                             {aiAnalysis.ingredientAnalysis?.map((ingredient, index) => (
-                                <div key={index} className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                                <div key={index} className="ai-ingredient-card">
+                                    <div className="ai-ingredient-header-info">
+                                        <div className="ai-ingredient-main-info">
+                                            <div className="ai-ingredient-number">
                                                 {index + 1}
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-gray-800 text-lg">{ingredient.ingredientName}</p>
-                                                <p className="text-sm text-gray-600 flex items-center gap-2">
-                                                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                            <div className="ai-ingredient-details">
+                                                <p className="ai-ingredient-name">{ingredient.ingredientName}</p>
+                                                <p className="ai-ingredient-meta">
+                                                    <span className="ai-category-tag">
                                                         {ingredient.category}
                                                     </span>
-                                                    <span className="text-red-600 font-semibold">{ingredient.totalWasteLbs} lbs total waste</span>
+                                                    <span className="ai-waste-info">{ingredient.totalWasteLbs} lbs total waste</span>
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-sm text-gray-600 font-medium">Recipes Affected</p>
-                                            <p className="text-xs text-gray-500">{ingredient.recipesAffected?.join(', ')}</p>
+                                        <div className="ai-recipes-info">
+                                            <p className="ai-recipes-label">Recipes Affected</p>
+                                            <p className="ai-recipes-list">{ingredient.recipesAffected?.join(', ')}</p>
                                         </div>
                                     </div>
                                     
                                     {/* Daily Recommendations */}
-                                    <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+                                    <div className="ai-daily-grid">
                                         {ingredient.dailyRecommendations?.map((day, dayIndex) => (
-                                            <div key={dayIndex} className="bg-white border border-gray-200 p-3 rounded-lg text-center shadow-sm hover:shadow-md transition-all duration-200">
-                                                <p className="text-sm font-bold text-gray-800 mb-2">{day.day}</p>
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                                                        <p className="text-xs text-red-600 font-medium">Waste: {day.currentWaste}</p>
+                                            <div key={dayIndex} className="ai-daily-card">
+                                                <p className="ai-daily-title">{day.day}</p>
+                                                <div className="ai-daily-stats">
+                                                    <div className="ai-daily-stat">
+                                                        <div className="ai-stat-dot ai-stat-dot-red"></div>
+                                                        <p className="ai-stat-text ai-stat-text-red">Waste: {day.currentWaste}</p>
                                                     </div>
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                                                        <p className="text-xs text-green-600 font-semibold">Import: {day.recommendedImport}</p>
+                                                    <div className="ai-daily-stat">
+                                                        <div className="ai-stat-dot ai-stat-dot-green"></div>
+                                                        <p className="ai-stat-text ai-stat-text-green">Import: {day.recommendedImport}</p>
                                                     </div>
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                                        <p className="text-xs text-blue-600 font-bold">-{day.reductionPercentage}%</p>
+                                                    <div className="ai-daily-stat">
+                                                        <div className="ai-stat-dot ai-stat-dot-emerald"></div>
+                                                        <p className="ai-stat-text ai-stat-text-emerald">-{day.reductionPercentage}%</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -731,23 +707,23 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                                     
                                     {/* Key Insights */}
                                     {ingredient.keyInsights && (
-                                        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div className="ai-insights-section">
+                                            <div className="ai-insights-header">
+                                                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                     </svg>
                                                 </div>
-                                                <p className="text-sm font-bold text-blue-800">Key Insights</p>
+                                                <p className="ai-insights-title">Key Insights</p>
                                             </div>
-                                            <ul className="text-sm text-blue-700 space-y-2">
+                                            <div className="ai-insights-list">
                                                 {ingredient.keyInsights.map((insight, insightIndex) => (
-                                                    <li key={insightIndex} className="flex items-start gap-3">
-                                                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                                                        <span className="leading-relaxed">{insight}</span>
-                                                    </li>
+                                                    <div key={insightIndex} className="ai-insights-item">
+                                                        <div className="ai-insights-bullet"></div>
+                                                        <span className="ai-insights-text">{insight}</span>
+                                                    </div>
                                                 ))}
-                                            </ul>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -756,23 +732,23 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
                     </div>
 
                     {/* Overall Recommendations */}
-                    <div className="mb-8">
-                        <div className="flex items-center gap-2 mb-6">
+                    <div className="ai-recommendations-section">
+                        <div className="ai-recommendations-header">
                             <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <h4 className="text-xl font-bold text-gray-800">Overall Recommendations</h4>
+                            <h4 className="ai-recommendations-title">Overall Recommendations</h4>
                         </div>
-                        <div className="space-y-4">
+                        <div className="ai-recommendations-list">
                             {aiAnalysis.overallRecommendations?.map((rec, index) => (
-                                <div key={index} className="flex items-start gap-4 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-                                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 mt-1 shadow-lg">
+                                <div key={index} className="ai-recommendation-item">
+                                    <div className="ai-recommendation-number">
                                         {index + 1}
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-gray-800 font-medium leading-relaxed">{rec}</p>
+                                        <p className="ai-recommendation-text">{rec}</p>
                                     </div>
                                 </div>
                             ))}
@@ -781,42 +757,42 @@ const WeeklyWasteChart = ({ restaurantId, realTimeWasteData = null }) => {
 
                     {/* Potential Savings */}
                     {aiAnalysis.potentialSavings && (
-                        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 p-6 rounded-xl shadow-sm">
-                            <div className="flex items-center gap-2 mb-6">
+                        <div className="ai-savings-section">
+                            <div className="ai-savings-header">
                                 <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center">
                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                                     </svg>
                                 </div>
-                                <h4 className="text-xl font-bold text-emerald-800">Potential Savings</h4>
+                                <h4 className="ai-savings-title">Potential Savings</h4>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="text-center p-4 bg-white rounded-lg shadow-sm border border-emerald-200">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <div className="ai-savings-grid">
+                                <div className="ai-savings-card">
+                                    <div className="ai-savings-icon">
                                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                                         </svg>
                                     </div>
-                                    <p className="text-sm text-emerald-600 font-medium mb-1">Weekly Reduction</p>
-                                    <p className="text-2xl font-bold text-emerald-700">{aiAnalysis.potentialSavings.weeklyWasteReduction}</p>
+                                    <p className="ai-savings-label">Weekly Reduction</p>
+                                    <p className="ai-savings-value">{aiAnalysis.potentialSavings.weeklyWasteReduction}</p>
                                 </div>
-                                <div className="text-center p-4 bg-white rounded-lg shadow-sm border border-emerald-200">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <div className="ai-savings-card">
+                                    <div className="ai-savings-icon">
                                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                     </div>
-                                    <p className="text-sm text-emerald-600 font-medium mb-1">Monthly Savings</p>
-                                    <p className="text-2xl font-bold text-emerald-700">{aiAnalysis.potentialSavings.monthlySavings}</p>
+                                    <p className="ai-savings-label">Monthly Savings</p>
+                                    <p className="ai-savings-value">{aiAnalysis.potentialSavings.monthlySavings}</p>
                                 </div>
-                                <div className="text-center p-4 bg-white rounded-lg shadow-sm border border-emerald-200">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <div className="ai-savings-card">
+                                    <div className="ai-savings-icon">
                                         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </div>
-                                    <p className="text-sm text-emerald-600 font-medium mb-1">Annual Savings</p>
-                                    <p className="text-2xl font-bold text-emerald-700">{aiAnalysis.potentialSavings.annualSavings}</p>
+                                    <p className="ai-savings-label">Annual Savings</p>
+                                    <p className="ai-savings-value">{aiAnalysis.potentialSavings.annualSavings}</p>
                                 </div>
                             </div>
                         </div>
