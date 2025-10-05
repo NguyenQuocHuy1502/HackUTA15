@@ -7,22 +7,9 @@ import DataViewer from '../components/DataViewer';
 import WasteAnalysisDashboard from '../components/WasteAnalysisDashboard';
 import { wasteService, orderService } from '../lib/supabaseService';
 import { WEEKDAYS, CONSISTENT_SAMPLE_DATA } from '../lib/wasteAnalysisService';
+import FecoLogo from '../assets/logo.png';
 
 // SVG ICON COMPONENTS 
-const FecoLogo = () => (
-    <svg width="160" height="50" viewBox="0 0 170 50" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="peelGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#EF4444" />
-                <stop offset="100%" stopColor="#DC2626" />
-            </linearGradient>
-        </defs>
-        <g><rect x="5" y="8" width="12" height="34" rx="2" fill="#4D7C0F" /><rect x="3" y="4" width="16" height="4" rx="2" fill="#65A30D" /><path d="M17 15 C 27 10, 37 15, 17 20 Z" fill="#84CC16" /><path d="M17 28 C 30 24, 40 28, 17 32 Z" fill="#84CC16" /></g>
-        <g><path d="M70 27 C 50 27, 50 12, 70 12 C 90 12, 90 42, 60 42 C 45 42, 45 32, 55 30" fill="none" stroke="url(#peelGradient)" strokeWidth="5" strokeLinecap="round"/></g>
-        <g><path d="M95 40 C 110 10, 125 10, 135 40 C 125 44, 110 44, 95 40" fill="#FDE047" /><path d="M95 40 C 93 37, 93 34, 95 32 L 97 33 Z" fill="#6B4628" /><path d="M96 39.5 C 100 30, 102 20, 100 15" stroke="#FBBF24" strokeWidth="1" fill="none" /></g>
-        <g><circle cx="150" cy="27" r="15" fill="#F97316"/><circle cx="147" cy="21" r="1" fill="#EA580C" opacity="0.8"/><circle cx="155" cy="25" r="1" fill="#EA580C" opacity="0.8"/><circle cx="149" cy="34" r="1" fill="#EA580C" opacity="0.8"/><path d="M154 14 C 158 10, 164 12, 161 17" fill="#4ADE80"/></g>
-    </svg>
-);
 const DashboardIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>);
 const AnalyticsIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>);
 const HistoryIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 2v6h6V2h-6zM15.5 2v6h6V2h-6zM2.5 15.5v6h6v-6h-6zM15.5 15.5v6h6v-6h-6z"></path></svg>);
@@ -41,7 +28,7 @@ const DataViewerIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="20"
 const Sidebar = ({ activeTab, setActiveTab }) => (
     <aside className="sidebar">
         <div className="sidebar-header">
-            <FecoLogo />
+      <img src={FecoLogo} alt="Feco company logo" />
         </div>
         <nav className="sidebar-nav">
             <button onClick={() => setActiveTab('dashboard')} className={activeTab === 'dashboard' ? 'active' : 'inactive'}>
