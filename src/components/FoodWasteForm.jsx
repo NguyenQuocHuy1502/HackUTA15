@@ -362,6 +362,18 @@ const ImportTracker = ({ recipes, restaurantId }) => {
         }));
     };
 
+    const handleRemoveItem = (category, itemName) => {
+    setImportData(prev => {
+        const newCategoryItems = { ...prev[category] };
+        delete newCategoryItems[itemName];
+        return {
+            ...prev,
+            [category]: newCategoryItems
+        };
+    });
+};
+
+
     const handleImportChange = (category, item, value) => {
         const amount = parseFloat(value) || 0;
         setImportData(prev => ({
@@ -470,6 +482,13 @@ const ImportTracker = ({ recipes, restaurantId }) => {
                                         className="item-amount-input"
                                         placeholder="lbs"
                                     />
+                                            <button
+            type="button"
+            onClick={() => handleRemoveItem(category, item)}
+            className="remove-item-btn"
+        >
+            <Icons.Trash />
+        </button>
                                 </div>
                             ))}
                         </div>

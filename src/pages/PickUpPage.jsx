@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import './PickUpPage.css';
-import { pickupService } from '../lib/supabaseService';
+import { pickupService, orderService } from '../lib/supabaseService';
+import { usePickupId } from '../lib/usePickupId';
+import { supabase } from '../lib/supabase';
 
 // Icon components
 const Icons = {
@@ -58,6 +60,7 @@ const Hero = () => (
         </div>
     </div>
 );
+
 
 // Restaurant Card component
 const RestaurantCard = ({ restaurant, onAddToCart, orders }) => {
@@ -176,6 +179,7 @@ const PickUpPage = () => {
     const [cart, setCart] = useState({});
     const [confirmedOrders, setConfirmedOrders] = useState({});
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const { pickupId, isProfileReady } = usePickupId();
     const [isFiltersVisible, setIsFiltersVisible] = useState(false);
     const [filters, setFilters] = useState({
         searchTerm: '',
@@ -183,6 +187,8 @@ const PickUpPage = () => {
         foodType: 'all',
         minWaste: 0
     });
+
+    
 
     // Fetch restaurants with waste data from Supabase
     useEffect(() => {
@@ -223,6 +229,14 @@ const PickUpPage = () => {
 
         fetchRestaurants();
     }, []);
+
+    const cartItemIds = useMemo(() => {
+  const ids = {};
+  Object.values(cart).flat().forEach(item => {
+    ids[item.id] = true;
+  });
+  return ids;
+}, [cart]);
 
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
@@ -269,23 +283,59 @@ const PickUpPage = () => {
         }));
     };
 
-    const handleConfirmPickup = () => {
-        // Mark items as confirmed
-        const newConfirmedOrders = { ...confirmedOrders };
-        Object.entries(cart).forEach(([restaurantId, items]) => {
-            items.forEach(item => {
-                newConfirmedOrders[item.id] = true;
-            });
-        });
-        setConfirmedOrders(newConfirmedOrders);
-        
-        // Clear cart and close modal
-        setCart({});
-        setIsModalOpen(false);
-        
-        // Show success message
-        alert('Pickup request submitted successfully!');
-    };
+const handleConfirmPickup = async () => {
+  if (!pickupId || !isProfileReady) {
+    alert('Pickup profile not ready. Please log in again.');
+    return;
+  }
+
+  try {
+    for (const [restaurantId, items] of Object.entries(cart)) {
+      // Insert order record
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          pickup_id: pickupId,
+          restaurant_id: restaurantId,
+          status: 'pending',
+        })
+        .select('order_id')
+        .single();
+
+      if (orderError) throw orderError;
+      const orderId = orderData.order_id;
+
+      // Insert order items (link to waste entries)
+      const orderItems = items.map(item => ({
+        order_id: orderId,
+        waste_id: item.id,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+    }
+
+    // Mark items as confirmed
+    const newConfirmedOrders = { ...confirmedOrders };
+    Object.values(cart).flat().forEach(item => {
+      newConfirmedOrders[item.id] = true;
+    });
+    setConfirmedOrders(newConfirmedOrders);
+
+    // Clear cart and close modal
+    setCart({});
+    setIsModalOpen(false);
+
+    alert('Pickup request submitted successfully!');
+  } catch (err) {
+    console.error('Error confirming pickup:', err);
+    alert(`Failed to submit order: ${err.message}`);
+  }
+};
+
 
     return (
         <div className="pickup-page-container">
@@ -409,13 +459,49 @@ const PickUpPage = () => {
                                 key={restaurant.id}
                                 restaurant={restaurant}
                                 onAddToCart={handleAddToCart}
-                                orders={confirmedOrders}
+                                orders={cartItemIds}
                             />
                         ))
                     ) : (
                         <p className="no-results">No restaurants match your criteria.</p>
                     )}
                 </div>
+
+                {cartSummary > 0 && (
+  <div className="fixed bottom-6 right-6 z-50">
+<button
+  onClick={() => setIsModalOpen(true)}
+  style={{ backgroundColor: '#22c55e' }}
+  className="
+       fixed 
+    bottom-6 
+    left-6 
+    z-50
+    text-white 
+    font-bold 
+    text-xl 
+    px-6 
+    py-4 
+    rounded-2xl 
+    shadow-2xl 
+    flex 
+    items-center 
+    gap-2
+    transition 
+    transform 
+    hover:scale-110 
+    hover:shadow-xl
+    hover:bg-green-600
+    focus:outline-none
+    focus:ring-4
+    focus:ring-green-300
+  "
+>
+  Checkout ({cartSummary})
+</button>
+  </div>
+)}
+
             
                 {/* Checkout Modal */}
             <CheckoutModal 
