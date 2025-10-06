@@ -1,163 +1,266 @@
-import { useEffect, useState } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
-import { restaurantService, pickupService } from '../lib/supabaseService'
+import { useEffect, useState } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { supabase } from '../lib/supabase';
 
 export const useAuthWithRestaurant = () => {
-  const { user, isAuthenticated, isLoading, error } = useAuth0()
-  const [profileId, setProfileId] = useState(null)
-  const [isProfileReady, setIsProfileReady] = useState(false)
-  const [profileError, setProfileError] = useState(null)
-  const [userRole, setUserRole] = useState('business') // Track user role
+    const { user, isAuthenticated, isLoading, error } = useAuth0();
+    const [profileReady, setProfileReady] = useState(false);
+    const [restaurantId, setRestaurantId] = useState(null);
+    const [isPickup, setIsPickup] = useState(false);
+    const [restaurantError, setRestaurantError] = useState(null);
 
-  useEffect(() => {
-    console.log('useAuthWithRestaurant useEffect triggered:', { isAuthenticated, user: !!user, isLoading })
-    
-    const setupProfile = async () => {
-      if (!isAuthenticated || !user) {
-        console.log('Not authenticated or no user, setting profile ready to false')
-        setIsProfileReady(false)
-        setProfileId(null)
-        return
-      }
-
-      try {
-        // Get user role from localStorage (set during login/signup)
-        const storedRole = localStorage.getItem('selectedRole') || 'business';
-        console.log('Stored role from localStorage:', storedRole)
-        console.log('All localStorage items:', Object.keys(localStorage).map(key => ({ key, value: localStorage.getItem(key) })))
-        setUserRole(storedRole);
+    useEffect(() => {
+        console.log('useAuthWithRestaurant useEffect triggered:', { user, isAuthenticated, isLoading });
         
-        console.log('Setting up profile for user:', user, 'Role:', storedRole)
-        console.log('User object details:', {
-          name: user.name,
-          email: user.email,
-          sub: user.sub,
-          nickname: user.nickname,
-          given_name: user.given_name,
-          family_name: user.family_name
-        })
-        
-        // Generate profile ID from user name
-        const generatedProfileId = generateProfileIdFromUser(user)
-        console.log('Generated profile ID:', generatedProfileId)
-
-        if (storedRole === 'pickup') {
-          console.log('🚚 PICKUP BRANCH: Creating pickup organization profile')
-          // Handle pickup organization profile
-          const existingPickup = await pickupService.getPickupById(generatedProfileId)
-          
-          if (existingPickup.success) {
-            console.log('Pickup organization already exists:', existingPickup.data)
-            setProfileId(existingPickup.data.pickup_id)
-            setIsProfileReady(true)
-            // Clear the stored role after successful pickup profile setup
-            localStorage.removeItem('selectedRole');
-            return
-          }
-
-          // Create new pickup organization if it doesn't exist
-          console.log('Creating new pickup organization for user')
-          const pickupData = {
-            pickup_id: generatedProfileId,
-            pickup_name: user.name || user.nickname || user.given_name || 'Pickup Organization',
-            contact_person: user.name || user.nickname || 'Contact Person',
-            phone_number: 'Phone not provided',
-            email: user.email || user.sub || `${user.nickname || 'user'}@example.com`
-          }
-
-          const createResult = await pickupService.createPickupProfile(pickupData)
-
-          if (createResult.success) {
-            console.log('Pickup organization created successfully:', createResult.data)
-            setProfileId(createResult.data.pickup_id)
-            setIsProfileReady(true)
-            // Clear the stored role after successful pickup profile setup
-            localStorage.removeItem('selectedRole');
-          } else {
-            console.error('Failed to create pickup organization:', createResult.error)
-            setProfileError(createResult.error)
-            setIsProfileReady(false)
-          }
-        } else {
-          console.log('🏪 RESTAURANT BRANCH: Creating restaurant profile')
-          // Handle restaurant profile
-          const existingRestaurant = await restaurantService.getRestaurantByEmail(user.email || user.sub)
-          
-          if (existingRestaurant.success) {
-            console.log('Restaurant already exists:', existingRestaurant.data)
-            setProfileId(existingRestaurant.data.restaurant_id)
-            setIsProfileReady(true)
-            // Clear the stored role after successful restaurant profile setup
-            localStorage.removeItem('selectedRole');
-            return
-          }
-
-          // Create new restaurant if it doesn't exist
-          console.log('Creating new restaurant for user')
-          const restaurantData = {
-            name: user.name || user.nickname || user.given_name || 'Restaurant User',
-            address: 'Address not provided',
-            phone: 'Phone not provided',
-            email: user.email || user.sub || `${user.nickname || 'user'}@example.com`
-          }
-
-          const createResult = await restaurantService.createRestaurantWithId(
-            generatedProfileId, 
-            restaurantData
-          )
-
-          if (createResult.success) {
-            console.log('Restaurant created successfully:', createResult.data)
-            setProfileId(createResult.data.restaurant_id)
-            setIsProfileReady(true)
-            // Clear the stored role after successful restaurant profile setup
-            localStorage.removeItem('selectedRole');
-          } else {
-            console.error('Failed to create restaurant:', createResult.error)
-            setProfileError(createResult.error)
-            setIsProfileReady(false)
-          }
+        if (!isAuthenticated || !user) {
+            console.log('Not authenticated or no user, setting profile ready to false');
+            setProfileReady(false);
+            setRestaurantId(null);
+            setIsPickup(false);
+            setRestaurantError(null);
+            return;
         }
 
-        console.log('Profile setup completed successfully:', { profileId: generatedProfileId, userRole: storedRole })
+        const setupProfile = async () => {
+            try {
+                setRestaurantError(null);
+                const storedRole = localStorage.getItem('selectedRole');
+                console.log('Stored role from localStorage:', storedRole);
+                console.log('All localStorage items:', Object.keys(localStorage).map(key => ({ key, value: localStorage.getItem(key) })));
+                
+                console.log('Setting up profile for user:', user);
+                console.log('Role:', storedRole);
+                console.log('User object details:', {
+                    email: user.email,
+                    name: user.name,
+                    sub: user.sub
+                });
 
-      } catch (error) {
-        console.error('Error setting up profile:', error)
-        setProfileError(error.message)
-        setIsProfileReady(false)
-      }
-    }
+                // Generate a consistent restaurant ID based on user email
+                const emailHash = user.email ? 
+                    user.email.split('').reduce((a, b) => {
+                        a = ((a << 5) - a) + b.charCodeAt(0);
+                        return a & a;
+                    }, 0) : 
+                    Math.random() * 1000000;
+                
+                const generatedId = `00000000-0000-0000-0000-${Math.abs(emailHash).toString(16).padStart(12, '0')}`;
+                console.log('Generated profile ID:', generatedId);
 
-    setupProfile()
-  }, [isAuthenticated, user])
+                if (storedRole === 'pickup') {
+                    console.log('🚚 PICKUP BRANCH: Creating pickup profile');
+                    
+                    try {
+                        // Check if pickup profile already exists
+                        const { data: existingPickup, error: fetchError } = await supabase
+                            .from('pickups')
+                            .select('*')
+                            .eq('email', user.email)
+                            .maybeSingle();
 
-  return {
-    user,
-    isAuthenticated,
-    isLoading,
-    error: error || profileError,
-    profileId, // Generic profile ID (restaurant_id or pickup_id)
-    restaurantId: userRole === 'business' ? profileId : null, // For backward compatibility
-    pickupId: userRole === 'pickup' ? profileId : null,
-    isRestaurantReady: isProfileReady, // For backward compatibility
-    isProfileReady,
-    profileError,
-    userRole // Return the user role for routing
-  }
-}
+                        if (fetchError) {
+                            console.error('Error fetching pickup profile:', fetchError);
+                            if (fetchError.message.includes('does not exist') || fetchError.message.includes('relation')) {
+                                console.log('Pickups table does not exist, using fallback mode');
+                                // Use fallback mode - create profile in memory
+                                setRestaurantId(generatedId);
+                                setIsPickup(true);
+                                setProfileReady(true);
+                                localStorage.removeItem('selectedRole');
+                                return;
+                            }
+                            throw fetchError;
+                        }
 
-// Helper function to generate a consistent profile ID from user data
-const generateProfileIdFromUser = (user) => {
-  // Use user's name or email as base for ID generation
-  const baseString = user.name || user.email || user.sub || 'default'
-  
-  // Create a simple hash-like ID by converting string to a UUID-like format
-  const hash = baseString.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0)
-    return a & a
-  }, 0)
-  
-  // Convert to a UUID-like format
-  const hex = Math.abs(hash).toString(16).padStart(8, '0')
-  return `00000000-0000-0000-0000-0000${hex}`
-}
+                        if (existingPickup) {
+                            console.log('Pickup already exists:', existingPickup);
+                            setRestaurantId(existingPickup.pickup_id);
+                            setIsPickup(true);
+                            setProfileReady(true);
+                            localStorage.removeItem('selectedRole');
+                            return;
+                        }
+
+                        // Create pickup profile
+                        const pickupData = {
+                            pickup_id: generatedId,
+                            email: user.email || 'no-email@example.com',
+                            name: user.name || 'Pickup Organization',
+                            organization_name: user.name || 'Pickup Organization',
+                            phone: user.phone_number || null,
+                            address: null,
+                            created_at: new Date().toISOString()
+                        };
+
+                        const { data: pickupResult, error: pickupError } = await supabase
+                            .from('pickups')
+                            .insert([pickupData])
+                            .select()
+                            .single();
+
+                        if (pickupError) {
+                            console.error('Error creating pickup profile:', pickupError);
+                            if (pickupError.message.includes('does not exist') || pickupError.message.includes('relation')) {
+                                console.log('Pickups table does not exist, using fallback mode');
+                                // Use fallback mode - create profile in memory
+                                setRestaurantId(generatedId);
+                                setIsPickup(true);
+                                setProfileReady(true);
+                                localStorage.removeItem('selectedRole');
+                                return;
+                            }
+                            // If it's a duplicate key error, try to fetch existing
+                            if (pickupError.code === '23505') {
+                                const { data: existingPickup } = await supabase
+                                    .from('pickups')
+                                    .select('*')
+                                    .eq('email', user.email)
+                                    .single();
+                                if (existingPickup) {
+                                    setRestaurantId(existingPickup.pickup_id);
+                                    setIsPickup(true);
+                                    setProfileReady(true);
+                                    localStorage.removeItem('selectedRole');
+                                    return;
+                                }
+                            }
+                            throw pickupError;
+                        }
+
+                        console.log('Created pickup profile:', pickupResult);
+                        setRestaurantId(pickupResult.pickup_id);
+                        setIsPickup(true);
+                    } catch (dbError) {
+                        console.error('Database error for pickup profile:', dbError);
+                        if (dbError.message.includes('does not exist') || dbError.message.includes('relation')) {
+                            console.log('Database tables not available, using fallback mode');
+                            setRestaurantId(generatedId);
+                            setIsPickup(true);
+                            setProfileReady(true);
+                            localStorage.removeItem('selectedRole');
+                            return;
+                        }
+                        throw dbError;
+                    }
+                } else {
+                    console.log('🏪 RESTAURANT BRANCH: Creating restaurant profile');
+                    
+                    try {
+                        // Check if restaurant profile already exists
+                        const { data: existingRestaurant, error: fetchError } = await supabase
+                            .from('restaurants')
+                            .select('*')
+                            .eq('email', user.email)
+                            .maybeSingle();
+
+                        if (fetchError) {
+                            console.error('Error fetching restaurant profile:', fetchError);
+                            if (fetchError.message.includes('does not exist') || fetchError.message.includes('relation')) {
+                                console.log('Restaurants table does not exist, using fallback mode');
+                                // Use fallback mode - create profile in memory
+                                setRestaurantId(generatedId);
+                                setIsPickup(false);
+                                setProfileReady(true);
+                                localStorage.removeItem('selectedRole');
+                                return;
+                            }
+                            throw fetchError;
+                        }
+
+                        if (existingRestaurant) {
+                            console.log('Restaurant already exists:', existingRestaurant);
+                            setRestaurantId(existingRestaurant.restaurant_id);
+                            setIsPickup(false);
+                            setProfileReady(true);
+                            localStorage.removeItem('selectedRole');
+                            return;
+                        }
+
+                        // Create restaurant profile
+                        const restaurantData = {
+                            restaurant_id: generatedId,
+                            email: user.email || 'no-email@example.com',
+                            name: user.name || 'Restaurant',
+                            phone: user.phone_number || null,
+                            address: null,
+                            created_at: new Date().toISOString()
+                        };
+
+                        const { data: restaurantResult, error: restaurantError } = await supabase
+                            .from('restaurants')
+                            .insert([restaurantData])
+                            .select()
+                            .single();
+
+                        if (restaurantError) {
+                            console.error('Error creating restaurant profile:', restaurantError);
+                            if (restaurantError.message.includes('does not exist') || restaurantError.message.includes('relation')) {
+                                console.log('Restaurants table does not exist, using fallback mode');
+                                // Use fallback mode - create profile in memory
+                                setRestaurantId(generatedId);
+                                setIsPickup(false);
+                                setProfileReady(true);
+                                localStorage.removeItem('selectedRole');
+                                return;
+                            }
+                            // If it's a duplicate key error, try to fetch existing
+                            if (restaurantError.code === '23505') {
+                                const { data: existingRestaurant } = await supabase
+                                    .from('restaurants')
+                                    .select('*')
+                                    .eq('email', user.email)
+                                    .single();
+                                if (existingRestaurant) {
+                                    setRestaurantId(existingRestaurant.restaurant_id);
+                                    setIsPickup(false);
+                                    setProfileReady(true);
+                                    localStorage.removeItem('selectedRole');
+                                    return;
+                                }
+                            }
+                            throw restaurantError;
+                        }
+
+                        console.log('Created restaurant profile:', restaurantResult);
+                        setRestaurantId(restaurantResult.restaurant_id);
+                        setIsPickup(false);
+                    } catch (dbError) {
+                        console.error('Database error for restaurant profile:', dbError);
+                        if (dbError.message.includes('does not exist') || dbError.message.includes('relation')) {
+                            console.log('Database tables not available, using fallback mode');
+                            setRestaurantId(generatedId);
+                            setIsPickup(false);
+                            setProfileReady(true);
+                            localStorage.removeItem('selectedRole');
+                            return;
+                        }
+                        throw dbError;
+                    }
+                }
+
+                setProfileReady(true);
+                localStorage.removeItem('selectedRole');
+                
+            } catch (error) {
+                console.error('Error setting up profile:', error);
+                setRestaurantError(error.message);
+                setProfileReady(false);
+            }
+        };
+
+        setupProfile();
+    }, [user, isAuthenticated, isLoading]);
+
+    return {
+        user,
+        isAuthenticated,
+        isLoading,
+        error,
+        profileReady,
+        restaurantId,
+        isPickup,
+        restaurantError,
+        isRestaurantReady: profileReady,
+        userRole: isPickup ? 'pickup' : 'business'
+    };
+};

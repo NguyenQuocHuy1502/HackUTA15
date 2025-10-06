@@ -108,3 +108,4 @@ The backend server saves daily import data to JSON files in the project director
 - **CORS errors**: Backend includes CORS middleware for frontend communication
 - **Port conflicts**: Backend uses port 3001, frontend uses 5173/5174
 - **File permissions**: Ensure the app has write permissions to create the data directory
+
